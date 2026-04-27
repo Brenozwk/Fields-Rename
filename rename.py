@@ -1,88 +1,109 @@
 import os
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
+
+pasta_escolhida = ""
+def escolher_pasta():
+    global pasta_escolhida
+    pasta = tk.filedialog.askdirectory(title = "Selecione a pasta com as imagens")
+    if pasta:
+        pasta_escolhida = pasta
+        texto_exibir = f"...{pasta[-30:]}" if len(pasta) > 30 else pasta
+        lbl_pasta_escolhida.config(text = texto_exibir, foreground = "blue")
 
 def renomear_arquivos():
+    global pasta_escolhida
+    if not pasta_escolhida:
+        messagebox.showinfo(title="Atenção", message = "Por favor, selecione uma pasta", icon = "warning")
+        return
+
     raio_input = entry_raio.get().strip()
-    if not raio_input:
-        messagebox.showwarning("Aviso", "Insira o valor do raio")
+    if not raio_input.isdigit():
+        messagebox.showerror(title = "Erro", message= "O raio deve ser um número inteiro", icon = "error")
         return
     raio = raio_input + "nm"
+
     try:
-        lambda0 = int(entry_onda.get().strip())
+        comprimento_onda = int(entry_onda.get().strip()) 
     except ValueError:
-        messagebox.showwarning("Erro", "o valor do comprimento inicial deve ser um número inteiro")
+        messagebox.showerror(title="Erro", message = "O comprimento de onda deve ser um número inteiro")
         return
-    
-    select_field = combo_campo.get().strip()
-    
+
+    select_field = combo_campo.get()
     if select_field == "EF":
-        pasta = rf"C:\Users\LPDS.DESKTOP-6BJ3NG6\Documents\Simulações COMSOL\Cilindros\Cilindros - Eduarda\Electric Field\{raio}"
-        prefixo = "Nanocilindro_EF"
-        msg_sucesso = "Imagens do campo elétrico renomeadas com sucesso!"
+        prefixo = 'NanoCilindro_EF'
     elif select_field == "MF":
-        pasta = rf"C:\Users\LPDS.DESKTOP-6BJ3NG6\Documents\Simulações COMSOL\Cilindros\Cilindros - Eduarda\Magnetic Field\{raio}"
-        prefixo = "Nanocilindro_MF"
-        msg_sucesso = "Imagens do campo magnético renomeadas com sucesso!"
+        prefixo = 'Nanodisco_MF'
     else:
-        messagebox.showwarning("Erro", "Selecione um campo válido (EF/MF)")
+        messagebox.showwarning("Atenção", "Seleção de campo inválida. Selecione [EF] ou [MF].")
         return
-    if not os.path.exists(pasta):
-        messagebox.showerror("Erro de diretório", f"A pasta não foi encontrada:\n{pasta}")
-        return
-    arquivos = os.listdir(pasta)
-    arquivos_filtrados = [f for f in arquivos if f.startswith("Untitled") and f.endswith(".png")]
-    arquivos_filtrados.sort()
 
-    if not arquivos_filtrados:
-        messagebox.showinfo("Aviso", "Nenhum arquivo começado com 'Untitled' e no formato '.png' foram encontrados")
-        return
-    onda_atual = lambda0
+    try:
+        arquivos = os.listdir(pasta_escolhida)
+        arquivos_filtrados = [f for f in arquivos if f.startswith("Untitled") and f.endswith(".png")]
+        arquivos_filtrados.sort()
 
-    for arquivo_antigo in arquivos_filtrados:
-        novo_nome = f"{prefixo}_{raio}_{onda_atual}nm.png"
-        caminho_antigo = os.path.join(pasta, arquivo_antigo)
-        caminho_novo = os.path.join(pasta, novo_nome)
+        if not arquivos_filtrados:
+            messagebox.showerror("Erro", "Não há nenhum arquivo começando com 'Untitled' no formato '.png'")
+            return
+        
+        onda_atual = comprimento_onda
+        for arquivo_antigo in arquivos_filtrados:
+            novo_nome = f"{prefixo}_{raio}_{onda_atual}nm.png"
+            caminho_antigo = os.path.join(pasta_escolhida, arquivo_antigo)
+            caminho_novo = os.path.join(pasta_escolhida, novo_nome)
 
-        os.rename(caminho_antigo, caminho_novo)
-        onda_atual += 4
-    
-    messagebox.showinfo("Sucesso", msg_sucesso)
+            os.rename(caminho_antigo, caminho_novo)
+            onda_atual += 4
+        
+        messagebox.showinfo("Sucesso", "Arquivos renomeados com sucesso")
+    except Exception as e:
+        messagebox.showerror("Erro", f"Ocorreu um erro inesperado\n{str(e)}")
+
 
 
 
 
 root = tk.Tk()
 root.title("Renomeador COMSOL")
-root.geometry("500x350")
+root.geometry("600x450") # Janela um pouco mais alta para caber os novos botões
 root.resizable(False, False)
 
-
 frame = ttk.Frame(root, padding="20")
-frame.pack(fill=tk.BOTH, expand=True)
+frame.pack(expand=True)
 
-
-titulo = ttk.Label(frame, text="Renomear Imagens de Simulações", font=("Arial", 12, "bold"))
+# Título
+titulo = ttk.Label(frame, text="Renomear imagens:\nCampo Elétrico e Campo Magnético", font=("Arial", 12, "bold"))
 titulo.grid(row=0, column=0, columnspan=2, pady=(0, 20))
 
-
-ttk.Label(frame, text="Raio da nanoestrutura (sem 'nm'):").grid(row=1, column=0, sticky=tk.W, pady=5)
+# Campo: Raio
+ttk.Label(frame, text="Raio da nanoestrutura (sem 'nm'):").grid(row=1, column=0,sticky=tk.W, pady=5)
 entry_raio = ttk.Entry(frame, width=15)
-entry_raio.grid(row=1, column=1, sticky=tk.E, pady=5)
+entry_raio.grid(row=1, column=1,sticky=tk.E,pady=5)
 
-
+# Campo: Comprimento de Onda
 ttk.Label(frame, text="Comprimento de onda inicial:").grid(row=2, column=0, sticky=tk.W, pady=5)
 entry_onda = ttk.Entry(frame, width=15)
 entry_onda.grid(row=2, column=1, sticky=tk.E, pady=5)
 
-
+# Campo: Seleção EF / MF
 ttk.Label(frame, text="Selecione o Campo:").grid(row=3, column=0, sticky=tk.W, pady=5)
 combo_campo = ttk.Combobox(frame, values=["EF", "MF"], state="readonly", width=12)
-combo_campo.current(0) # Define "EF" como padrão
-combo_campo.grid(row=3, column=1, sticky=tk.E, pady=5)
+combo_campo.current(0) 
+combo_campo.grid(row=3, column=1, sticky=tk.E,pady=5)
 
+# Linha divisória visual
+ttk.Separator(frame, orient='horizontal').grid(row=4, column=0, columnspan=2, pady=15)
 
+# Área de Seleção de Pasta
+btn_pasta = ttk.Button(frame, text="📁 Escolher Pasta", command=escolher_pasta)
+btn_pasta.grid(row=5, column=0, columnspan=2, pady=5)
+
+lbl_pasta_escolhida = ttk.Label(frame, text="Nenhuma pasta selecionada", foreground="gray")
+lbl_pasta_escolhida.grid(row=6, column=0, columnspan=2, pady=5)
+
+# Botão de Execução
 btn_executar = ttk.Button(frame, text="Renomear Arquivos", command=renomear_arquivos)
-btn_executar.grid(row=4, column=0, columnspan=2, pady=(25, 0), ipadx=10, ipady=5)
+btn_executar.grid(row=7, column=0, columnspan=2, pady=(25, 0), ipadx=10, ipady=5)
 
-root.mainloop()        
+root.mainloop()
